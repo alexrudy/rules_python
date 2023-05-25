@@ -333,7 +333,6 @@ func (py *Python) GenerateRules(args language.GenerateArgs) language.GenerateRes
 			main := fmt.Sprintf(":%s", pyTestEntrypointFilename)
 			pyTestTarget.
 				addSrc(entrypointTarget).
-				addResolvedDependency(entrypointTarget).
 				setMain(main)
 		} else {
 			pyTestTarget.setMain(pyTestEntrypointFilename)
