@@ -1,3 +1,17 @@
+// Copyright 2023 The Bazel Authors. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package manifest
 
 import (
@@ -26,12 +40,8 @@ func NewFile(manifest *Manifest) *File {
 }
 
 // Encode encodes the manifest file to the given writer.
-func (f *File) Encode(w io.Writer, requirementsPath string) error {
-	requirementsChecksum, err := sha256File(requirementsPath)
-	if err != nil {
-		return fmt.Errorf("failed to encode manifest file: %w", err)
-	}
-	integrityBytes, err := f.calculateIntegrity(requirementsChecksum)
+func (f *File) Encode(w io.Writer, manifestGeneratorHashFile, requirements io.Reader) error {
+	integrityBytes, err := f.calculateIntegrity(manifestGeneratorHashFile, requirements)
 	if err != nil {
 		return fmt.Errorf("failed to encode manifest file: %w", err)
 	}
@@ -45,12 +55,8 @@ func (f *File) Encode(w io.Writer, requirementsPath string) error {
 }
 
 // VerifyIntegrity verifies if the integrity set in the File is valid.
-func (f *File) VerifyIntegrity(requirementsPath string) (bool, error) {
-	requirementsChecksum, err := sha256File(requirementsPath)
-	if err != nil {
-		return false, fmt.Errorf("failed to verify integrity: %w", err)
-	}
-	integrityBytes, err := f.calculateIntegrity(requirementsChecksum)
+func (f *File) VerifyIntegrity(manifestGeneratorHashFile, requirements io.Reader) (bool, error) {
+	integrityBytes, err := f.calculateIntegrity(manifestGeneratorHashFile, requirements)
 	if err != nil {
 		return false, fmt.Errorf("failed to verify integrity: %w", err)
 	}
@@ -62,7 +68,9 @@ func (f *File) VerifyIntegrity(requirementsPath string) (bool, error) {
 // provided checksum for the requirements.txt file used as input to the modules
 // mapping, plus the manifest structure in the manifest file. This integrity
 // calculation ensures the manifest files are kept up-to-date.
-func (f *File) calculateIntegrity(requirementsChecksum []byte) ([]byte, error) {
+func (f *File) calculateIntegrity(
+	manifestGeneratorHash, requirements io.Reader,
+) ([]byte, error) {
 	hash := sha256.New()
 
 	// Sum the manifest part of the file.
@@ -72,8 +80,13 @@ func (f *File) calculateIntegrity(requirementsChecksum []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to calculate integrity: %w", err)
 	}
 
+	// Sum the manifest generator checksum bytes.
+	if _, err := io.Copy(hash, manifestGeneratorHash); err != nil {
+		return nil, fmt.Errorf("failed to calculate integrity: %w", err)
+	}
+
 	// Sum the requirements.txt checksum bytes.
-	if _, err := hash.Write(requirementsChecksum); err != nil {
+	if _, err := io.Copy(hash, requirements); err != nil {
 		return nil, fmt.Errorf("failed to calculate integrity: %w", err)
 	}
 
@@ -131,22 +144,7 @@ type Manifest struct {
 type PipRepository struct {
 	// The name of the pip_install or pip_repository target.
 	Name string
-	// The incremental property of pip_repository.
-	Incremental bool
-}
-
-// sha256File calculates the checksum of a given file path.
-func sha256File(filePath string) ([]byte, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate sha256 sum for file: %w", err)
-	}
-	defer file.Close()
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return nil, fmt.Errorf("failed to calculate sha256 sum for file: %w", err)
-	}
-
-	return hash.Sum(nil), nil
+	// UsePipRepositoryAliases allows to use aliases generated pip_repository
+	// when passing incompatible_generate_aliases = True.
+	UsePipRepositoryAliases bool `yaml:"use_pip_repository_aliases,omitempty"`
 }
