@@ -1,38 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@bazel_gazelle//:def.bzl", "gazelle")
-
-go_library(
-     name = "gazelle_mod",
-     srcs = [
-         "configure.go",
-         "fix.go",
-         "generate.go",
-         "kinds.go",
-         "language.go",
-         "parser.go",
-         "resolve.go",
-         "std_modules.go",
-         "target.go",
-     ],
-     importpath = "github.com/bazelbuild/rules_python/gazelle",
-     visibility = ["//visibility:public"],
-     deps = [
-         "//manifest",
-         "//pythonconfig",
-         "@bazel_gazelle//config:go_default_library",
-         "@bazel_gazelle//label:go_default_library",
-         "@bazel_gazelle//language:go_default_library",
-         "@bazel_gazelle//repo:go_default_library",
-         "@bazel_gazelle//resolve:go_default_library",
-         "@bazel_gazelle//rule:go_default_library",
-         "@com_github_bazelbuild_buildtools//build:go_default_library",
-         "@com_github_bmatcuk_doublestar//:doublestar",
-         "@com_github_emirpasic_gods//lists/singlylinkedlist",
-         "@com_github_emirpasic_gods//sets/treeset",
-         "@com_github_emirpasic_gods//utils",
-         "@io_bazel_rules_go//go/tools/bazel:go_default_library",
-     ],
- )
 
 
 # Gazelle configuration options.
